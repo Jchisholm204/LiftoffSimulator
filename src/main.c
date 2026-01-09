@@ -9,11 +9,12 @@
  * @copyright Copyright (c) 2026
  */
 
-#include "stdio.h"
+#include <stdio.h>
+#include "joystick.h"
 
 int main(int argc, char **argv) {
   (void)argc;
   (void)argv;
   printf("Hello World\n");
-  return 0;
+  return joystick_test();
 }
