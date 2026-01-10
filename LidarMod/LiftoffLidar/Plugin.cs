@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
+
 namespace LiftoffLidarMod
 {
     [BepInPlugin("com.jacob.lidarmod", "Liftoff Lidar", "1.0.0")]
@@ -15,6 +16,7 @@ namespace LiftoffLidarMod
         private UdpClient udpClient;
         private IPEndPoint remoteEndPoint;
         int updateCounter = 0;
+        private const int N_POINTS = 180;
 
         // Awake runs once when the mod is loaded
         private void Awake()
@@ -35,25 +37,12 @@ namespace LiftoffLidarMod
             // udpClient.Send(sendBytes, sendBytes.Length, remoteEndPoint);
         }
 
-        // private void Update(){
-        //     string message = $"Update {updateCounter}\n";
-        //     byte[] sendBytes = Encoding.ASCII.GetBytes(message);
-        //     udpClient.Send(sendBytes, sendBytes.Length, remoteEndPoint);
-        //     updateCounter = updateCounter + 1;
-        //
-        // }
 
         private void FixedUpdate(){
             // string message = $"FixedUpdate {updateCounter}\n";
             // byte[] sendBytes = Encoding.ASCII.GetBytes(message);
             // udpClient.Send(sendBytes, sendBytes.Length, remoteEndPoint);
             updateCounter = updateCounter + 1;
-
-            // foreach(GameObject go in GameObject.FindObjectsOfType<GameObject>()) {
-            //     if(go.name.Contains("Drone") || go.name.Contains("Quad")) {
-            //         Logger.LogInfo($"Found potential drone object: {go.name} with tag: {go.tag}");
-            //     }
-            // }
 
             GameObject drone = GameObject.Find("DroneHUD_Custom(Clone)");
             if (drone == null){
@@ -63,17 +52,23 @@ namespace LiftoffLidarMod
                 return;
             }
             else {
-                // if(updateCounter % 100 == 0){
+                if(updateCounter % 100 == 0){
                     Log.LogInfo($"LidarMod: Drone found at {drone.transform.position}");
-                // }
+                }
             }
 
-            float[] distances = new float[360];
+            // Slow down the following loop
+            if(updateCounter % 3 != 0){
+                return;
+            }
+
+            float[] distances = new float[N_POINTS*2];
             Vector3 origin = drone.transform.position;
 
-            for (int i = 0; i < 360; i++)
+            for (int i = 0; i < N_POINTS; i++)
             {
-                Vector3 direction = Quaternion.Euler(0, i, 0) * drone.transform.forward;
+                // Scan forward and to the sides
+                Vector3 direction = Quaternion.AngleAxis(i*(360f/N_POINTS), drone.transform.up) * drone.transform.forward;
                 if (Physics.Raycast(origin, direction, out RaycastHit hit, 50f))
                 {
                     distances[i] = hit.distance;
@@ -82,14 +77,25 @@ namespace LiftoffLidarMod
                 {
                     distances[i] = 50.0f;
                 }
+
+                // Scan up and to the sides
+                direction = Quaternion.AngleAxis(i*(360f/N_POINTS), drone.transform.forward) * drone.transform.up;
+                if (Physics.Raycast(origin, direction, out hit, 50f))
+                {
+                    distances[N_POINTS+i] = hit.distance;
+                }
+                else
+                {
+                    distances[N_POINTS+i] = 50.0f;
+                }
             }
 
-            // byte[] payload = new byte[distances.Length * 4];
-            // Buffer.BlockCopy(distances, 0, payload, 0, payload.Length);
-            // udpClient.Send(payload, payload.Length, remoteEndPoint);
-            string message = $"FixedUpdate {updateCounter}: {drone.transform.position} - {distances[0]}\n";
-            byte[] sendBytes = Encoding.ASCII.GetBytes(message);
-            udpClient.Send(sendBytes, sendBytes.Length, remoteEndPoint);
+            byte[] payload = new byte[distances.Length * 4];
+            Buffer.BlockCopy(distances, 0, payload, 0, payload.Length);
+            udpClient.Send(payload, payload.Length, remoteEndPoint);
+            // string message = $"FixedUpdate {updateCounter}: {drone.transform.position} - {distances[0]}\n";
+            // byte[] sendBytes = Encoding.ASCII.GetBytes(message);
+            // udpClient.Send(sendBytes, sendBytes.Length, remoteEndPoint);
         }
     }
 }
