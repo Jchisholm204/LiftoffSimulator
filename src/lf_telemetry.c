@@ -39,6 +39,10 @@ int lf_telemetry_init(struct lf_telemetry *tel) {
         perror("Bind Failed");
         exit(EXIT_FAILURE);
     }
+    int buffer_size =
+        sizeof(lf_telemetry_packet_t); // Only hold one packet's worth of data
+    setsockopt(tel->sockfd, SOL_SOCKET, SO_RCVBUF, &buffer_size,
+               sizeof(buffer_size));
     return 0;
 }
 
@@ -46,6 +50,22 @@ int lf_telemetry_read(struct lf_telemetry *tel, lf_telemetry_packet_t *pkt) {
     if (!tel || !pkt) {
         return -1;
     }
+    // int packets_read = 0;
+    // lf_telemetry_packet_t temp_packet;
+    // // Keep reading until the buffer is empty
+    // while (recvfrom(tel->sockfd, &temp_packet, sizeof(lf_telemetry_packet_t),
+    //                 MSG_DONTWAIT, NULL, NULL) > 0) {
+    //     // Copy the data to our main packet pointer
+    //     memcpy(pkt, &temp_packet, sizeof(lf_telemetry_packet_t));
+    //     packets_read++;
+    // }
+    //
+    // if (packets_read > 0) {
+    //     return 1; // We found at least one new packet and 'packet' now holds the
+    //               // newest
+    // }
+    //
+    // return 0; // No new data
     ssize_t n = recvfrom(tel->sockfd, pkt, sizeof(lf_telemetry_packet_t),
                          MSG_DONTWAIT, NULL, NULL);
 
