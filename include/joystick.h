@@ -22,8 +22,8 @@ enum axis {
     AXIS_ROLL = ABS_Y,
 };
 
-#define AXIS_MIN 0
-#define AXIS_MAX (1024 * 2)
+#define AXIS_MAX 23767
+#define AXIS_MIN (-AXIS_MAX)
 
 struct joystick {
     int fd;

@@ -17,7 +17,7 @@
 #include <string.h>
 #include <unistd.h>
 
-inline void emit(int fd, int type, int code, int val) {
+void emit(int fd, int type, int code, int val) {
     struct input_event ie;
     ie.type = type;
     ie.code = code;
@@ -37,9 +37,17 @@ int joystick_init(struct joystick *joy) {
         return !joy->fd;
     }
 
-    int axes[] = {AXIS_THROTTLE, AXIS_YAW, AXIS_PITCH, AXIS_ROLL};
-    struct uinput_abs_setup abs_setup;
+    ioctl(joy->fd, UI_SET_EVBIT, EV_ABS);
+    ioctl(joy->fd, UI_SET_EVBIT, EV_KEY);
+    ioctl(joy->fd, UI_SET_KEYBIT, BTN_TRIGGER);
 
+    int axes[] = {AXIS_THROTTLE, AXIS_YAW, AXIS_PITCH, AXIS_ROLL};
+
+    for (int i = 0; i < 4; i++) {
+        ioctl(joy->fd, UI_SET_ABSBIT, axes[i]);
+    }
+
+    struct uinput_abs_setup abs_setup;
     for (int i = 0; i < 4; i++) {
         memset(&abs_setup, 0, sizeof(abs_setup));
         abs_setup.code = axes[i];
@@ -65,7 +73,8 @@ int joystick_write(struct joystick *joy, enum axis axis, int value) {
     if (!joy) {
         return -1;
     }
-    emit(joy->fd, EV_ABS, axis, value);
+
+    emit(joy->fd, EV_ABS, (int) axis, value);
     // Sync is mandatory to "flush" the event
     emit(joy->fd, EV_SYN, SYN_REPORT, 0);
     return 0;

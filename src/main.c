@@ -11,10 +11,12 @@
 
 #include <stdio.h>
 #include "joystick.h"
+#include "lf_telemetry.h"
 
 int main(int argc, char **argv) {
   (void)argc;
   (void)argv;
   printf("Hello World\n");
+  // return lf_telemetry_test();
   return joystick_test();
 }
