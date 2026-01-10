@@ -1,0 +1,94 @@
+using BepInEx;
+using BepInEx.Logging;
+using UnityEngine;
+using System;
+using System.Collections;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+
+namespace LiftoffLidarMod
+{
+    [BepInPlugin("com.jacob.lidarmod", "Liftoff Lidar", "1.0.0")]
+    public class Plugin : BaseUnityPlugin
+    {
+        internal static ManualLogSource Log;
+        private UdpClient udpClient;
+        private IPEndPoint remoteEndPoint;
+        
+        private void Awake()
+        {
+            Log = BepInEx.Logging.Logger.CreateLogSource("LidarMod");
+            Log.LogInfo("Lidar Mod starting up");
+            
+            try{
+                udpClient = new UdpClient();
+                remoteEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 9002);
+                Log.LogInfo("UDP Client Ready on port 9002");
+                
+                string message = "Hello\n";
+                byte[] sendBytes = Encoding.ASCII.GetBytes(message);
+                udpClient.Send(sendBytes, sendBytes.Length, remoteEndPoint);
+            }
+            catch (Exception e){
+                Log.LogError($"Failed to setup UDP: {e.Message}");
+            }
+            
+            Log.LogInfo("Lidar Mod Loaded");
+        }
+        
+        // Use Start instead of Awake - it runs after the game loop starts
+        private void Start()
+        {
+            Log.LogInfo("Plugin Start() called - game loop is active!");
+            
+            GameObject lidarObject = new GameObject("LidarUpdater");
+            LidarUpdater updater = lidarObject.AddComponent<LidarUpdater>();
+            updater.Initialize(udpClient, remoteEndPoint, Log);
+            DontDestroyOnLoad(lidarObject);
+            
+            Log.LogInfo("LidarUpdater GameObject created in Start()");
+        }
+    }
+    
+    public class LidarUpdater : MonoBehaviour
+    {
+        private UdpClient udpClient;
+        private IPEndPoint remoteEndPoint;
+        private ManualLogSource log;
+        private int updateCount = 0;
+        
+        public void Initialize(UdpClient client, IPEndPoint endPoint, ManualLogSource logger)
+        {
+            udpClient = client;
+            remoteEndPoint = endPoint;
+            log = logger;
+            log.LogInfo("LidarUpdater initialized");
+        }
+        
+        private void Start()
+        {
+            log.LogInfo("LidarUpdater Start() called!");
+        }
+        
+        private void Update()
+        {
+            updateCount++;
+            if (updateCount % 60 == 0) // Log every 60 frames
+            {
+                log.LogInfo($"Update called! Count: {updateCount}");
+            }
+            
+            try
+            {
+                string message = $"Update {updateCount}\n";
+                byte[] sendBytes = Encoding.ASCII.GetBytes(message);
+                udpClient.Send(sendBytes, sendBytes.Length, remoteEndPoint);
+            }
+            catch (Exception e)
+            {
+                log.LogError($"UDP send failed: {e.Message}");
+            }
+        }
+    }
+}
